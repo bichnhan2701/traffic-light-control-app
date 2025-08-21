@@ -4,7 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id ("com.google.devtools.ksp")
     id("kotlin-kapt")
-//    id("dagger.hilt.android.plugin")
     id ("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
 }
@@ -65,13 +64,11 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.0.0"))
     // Use the Firebase KTX extensions
     implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
-    implementation("com.google.firebase:firebase-firestore-ktx:24.10.3")
+    implementation ("com.google.firebase:firebase-database-ktx:21.0.0")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.56.2")
     kapt("com.google.dagger:hilt-android-compiler:2.56.2")
-//    implementation ("com.google.dagger:hilt-android:2.56.2")
-//    ksp( "com.google.dagger:hilt-compiler:2.56.2")
     implementation("androidx.hilt:hilt-navigation-compose:1.1.0")
 
     // Coroutines

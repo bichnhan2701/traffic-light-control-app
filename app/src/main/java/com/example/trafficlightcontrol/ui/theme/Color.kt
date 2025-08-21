@@ -31,8 +31,11 @@ val DarkSecondaryContainer = Color(0xFF354B40)
 val DarkOnSecondaryContainer = Color(0xFFCFE9D8)
 
 // Functional colors
-val Red = Color(0xFFE53935)
-val Yellow = Color(0xFFFFEB3B)
-val Green = Color(0xFF43A047)
 val ErrorColor = Color(0xFFBA1A1A)
 val WarningColor = Color(0xFFFF8800)
+
+val Green = Color(0xFF4CAF50)
+val Yellow = Color(0xFFFFEB3B)
+val Red = Color(0xFFF44336)
+val Orange = Color(0xFFFF9800)
+val Blue = Color(0xFF2196F3)
