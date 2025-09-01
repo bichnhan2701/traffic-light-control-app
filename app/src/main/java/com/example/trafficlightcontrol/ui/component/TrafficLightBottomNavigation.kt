@@ -38,11 +38,6 @@ fun TrafficLightBottomNavigation(
             icon = Icons.Default.Home
         ),
         BottomNavItem(
-            route = Screen.Schedule.route,
-            label = "Lịch",
-            icon = Icons.Default.CalendarToday
-        ),
-        BottomNavItem(
             route = Screen.History.route,
             label = "Lịch sử",
             icon = Icons.Default.History

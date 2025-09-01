@@ -4,11 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,41 +12,50 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.trafficlightcontrol.ui.component.ConnectionStatusIndicator
 import com.example.trafficlightcontrol.ui.component.ModeCard
 import com.example.trafficlightcontrol.ui.component.TrafficLightDisplay
-import com.example.trafficlightcontrol.ui.theme.*
 import com.example.trafficlightcontrol.ui.viewmodel.DashboardViewModel
 import androidx.compose.foundation.lazy.LazyColumn
+import com.example.trafficlightcontrol.data.model.Durations
+import com.example.trafficlightcontrol.data.model.Mode
+import com.example.trafficlightcontrol.data.model.Phase
+import com.example.trafficlightcontrol.data.model.UiLights
+import com.example.trafficlightcontrol.data.repository.toUiLights
+import com.example.trafficlightcontrol.ui.component.ConnectionStatusBadge
+import com.example.trafficlightcontrol.ui.component.ModeStatusBadge
+import com.example.trafficlightcontrol.ui.component.PhaseConfigCard
+import com.example.trafficlightcontrol.ui.theme.Orange
+import com.example.trafficlightcontrol.ui.theme.Red
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     viewModel: DashboardViewModel,
-    navigateToSchedule: () -> Unit,
     navigateToControl: (String) -> Unit
 ) {
-    val currentStatus by viewModel.currentStatus.collectAsState()
-    val systemStatus by viewModel.systemStatus.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
+    val ui by viewModel.uiState.collectAsState()
 
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val isLoading = ui.isLoading
+    val error = ui.error
+    val p = ui.phasePanel
 
-    // Hiển thị Snackbar khi có lỗi
+    val lastSeen = ui.esp?.lastSeenAt ?: 0L
+    val now = ui.serverNow
+    val agoMs = (now - lastSeen).coerceAtLeast(0L)
+
+    // ép kiểu rõ ràng để tránh suy luận thành Any
+    val lightsForUi: UiLights = ui.lights?.toUiLights() ?: UiLights()
+
     LaunchedEffect(error) {
-        error?.let {
-            snackbarHostState.showSnackbar(
-                message = it,
-                actionLabel = "Đóng"
-            )
-            viewModel.clearError()
+        if (!error.isNullOrEmpty()) {
+            snackbarHostState.showSnackbar(error, withDismissAction = true)
         }
     }
 
     Scaffold(
         topBar = {
-            androidx.compose.material3.TopAppBar(
+            TopAppBar(
                 title = {
                     Text(
                         "Traffic Light Control",
@@ -61,114 +66,94 @@ fun DashboardScreen(
                     )
                 },
                 actions = {
-                    // Hiển thị trạng thái kết nối
-                    systemStatus?.let {
-                        ConnectionStatusIndicator(isConnected = it.esp32_connected)
-                    }
-
-                    // Nút đồng bộ thời gian
-                    IconButton(onClick = { viewModel.syncTime() }) {
-                        Icon(Icons.Default.Sync, contentDescription = "Đồng bộ thời gian")
-                    }
+                    ConnectionStatusBadge(
+                        label = "ESP",
+                        online = ui.esp?.online,
+                        agoMs = agoMs,
+                        windowMs = 20_000L
+                    )
+                    Spacer(Modifier.width(16.dp))
                 }
             )
         },
-        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                androidx.compose.material3.CircularProgressIndicator()
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
             }
         } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .padding(16.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                currentStatus?.let { status ->
-                    item {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        TrafficLightDisplay(
-                            mode = status.mode,
-                            currentPhase = status.phase,
-                            timeLeft = status.time_left,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                    }
-                    item {
+                // --- Khối mô phỏng đèn + tiến độ pha ---
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp).padding(horizontal = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment =  Alignment.CenterVertically
+                    ) {
                         Text(
-                            "Điều khiển nhanh",
-                            style = MaterialTheme.typography.titleMedium
+                            text = "Trạng thái hiện tại",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        ModeStatusBadge(mode = p?.mode?.name ?: Mode.default.name)
                     }
-                    item {
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            ModeCard(
-                                title = "Mặc định",
-                                color = Blue,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Schedule,
-                                        contentDescription = "Theo lịch",
-                                        tint = Blue
-                                    )
-                                },
-                                onClick = navigateToSchedule
-                            )
-                            ModeCard(
-                                title = "Cao điểm",
-                                color = Orange,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Traffic,
-                                        contentDescription = "Cao điểm",
-                                        tint = Orange
-                                    )
-                                },
-                                onClick = { navigateToControl("peak") }
-                            )
-                        }
+                    Spacer(Modifier.height(8.dp))
+                    TrafficLightDisplay(
+                        mode = p?.mode ?: Mode.default,
+                        phase = p?.phase ?: Phase.A_GREEN,
+                        timeLeftMs = p?.timeLeftMs ?: 0L,
+                        durations = ui.durations ?: Durations(),
+                        lights = lightsForUi
+                    )
+                }
+
+                item{
+                    // Header + chip mode
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "Cấu hình pha hiện tại",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                     }
-                    item {
-                        Row(
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            ModeCard(
-                                title = "Đêm",
-                                color = Color.DarkGray,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Default.NightlightRound,
-                                        contentDescription = "Đêm",
-                                        tint = Color.DarkGray
-                                    )
-                                },
-                                onClick = { navigateToControl("night") }
-                            )
-                            ModeCard(
-                                title = "Khẩn cấp",
-                                color = Red,
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Warning,
-                                        contentDescription = "Khẩn cấp",
-                                        tint = Red
-                                    )
-                                },
-                                onClick = { navigateToControl("emergency") }
-                            )
-                        }
-                    }
+                    Spacer(Modifier.height(12.dp))
+                    PhaseConfigCard(
+                        durations = ui.durations ?: Durations(),
+                    )
+                }
+
+                // --- Khối điều khiển nhanh ---
+                item {
+                    Spacer(Modifier.height(8.dp))
+                    Text("Chế độ điều khiển", style = MaterialTheme.typography.titleMedium)
+                    ModeCard(
+                        title = "Chế độ giờ cao điểm",
+                        color = Orange,
+                        icon = { Icon(Icons.Default.Traffic, contentDescription = null, tint = Orange) },
+                        onClick = { navigateToControl("peak") }
+                    )
+                    ModeCard(
+                        title = "Chế độ đêm",
+                        color = Color.DarkGray,
+                        icon = { Icon(Icons.Default.NightsStay, contentDescription = null, tint = Color.DarkGray) },
+                        onClick = { navigateToControl("night") }
+                    )
+                    ModeCard(
+                        title = "Chế độ ưu tiên khẩn cấp",
+                        color = Red,
+                        icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = Red) },
+                        onClick = { navigateToControl("emergency") }
+                    )
                 }
             }
         }

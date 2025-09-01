@@ -14,12 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.trafficlightcontrol.data.model.LogEntry
-import com.example.trafficlightcontrol.ui.component.FormattedDate
-import com.example.trafficlightcontrol.ui.component.FormattedTime
+import com.example.trafficlightcontrol.data.model.LogType
+import com.example.trafficlightcontrol.data.model.Mode
 import com.example.trafficlightcontrol.ui.theme.*
 import com.example.trafficlightcontrol.ui.viewmodel.HistoryViewModel
 import java.text.SimpleDateFormat
@@ -30,23 +31,10 @@ import java.util.*
 fun HistoryScreen(
     viewModel: HistoryViewModel
 ) {
-    val logs by viewModel.logs.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    val selectedDate by viewModel.selectedDate.collectAsState()
-
+    val uiState by viewModel.state.collectAsState()
     val scaffoldState = remember { SnackbarHostState() }
-
-    // Hiển thị Snackbar khi có lỗi
-    LaunchedEffect(error) {
-        error?.let {
-            scaffoldState.showSnackbar(
-                message = it,
-                actionLabel = "Đóng"
-            )
-            viewModel.clearError()
-        }
-    }
+    val dateFormat = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+    val timeFormat = remember { SimpleDateFormat("HH:mm:ss", Locale.getDefault()) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = scaffoldState) },
@@ -61,107 +49,52 @@ fun HistoryScreen(
                         fontSize = 20.sp
                     )
                 },
-                actions = {
-                    // Nút chọn ngày
-                    IconButton(onClick = {
-                        // Bỏ bộ lọc ngày
-                        if (selectedDate != null) {
-                            viewModel.setDateFilter(null)
-                        } else {
-                            // Chọn ngày hiện tại để lọc
-                            viewModel.setDateFilter(Date())
-                        }
-                    }) {
-                        Icon(
-                            if (selectedDate == null) Icons.Default.CalendarToday
-                            else Icons.Default.FilterAlt,
-                            contentDescription = "Chọn ngày"
-                        )
-                    }
-                }
             )
         }
     ) { padding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
+        Box(Modifier.fillMaxSize().padding(padding)) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Hiển thị bộ lọc đang áp dụng
-                    if (selectedDate != null) {
-                        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                Column(Modifier.fillMaxSize()) {
+                    if (uiState.dateFilter != null) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Blue.copy(alpha = 0.1f))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                Icons.Default.FilterAlt,
-                                contentDescription = null,
-                                tint = Blue
-                            )
-
-                            Spacer(modifier = Modifier.width(8.dp))
-
+                            Icon(Icons.Default.FilterAlt, null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                "Lọc theo ngày: ${dateFormat.format(selectedDate!!)}",
+                                "Lọc theo ngày: ${uiState.dateFilter}",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Blue
+                                color = MaterialTheme.colorScheme.primary
                             )
-
-                            Spacer(modifier = Modifier.weight(1f))
-
-                            IconButton(onClick = { viewModel.setDateFilter(null) }) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Xóa bộ lọc",
-                                    tint = Blue
-                                )
+                            Spacer(Modifier.weight(1f))
+                            IconButton(onClick = { viewModel.clearFilter() }) {
+                                Icon(Icons.Default.Close, contentDescription = "Xóa bộ lọc", tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }
 
+                    val grouped: List<Pair<String, List<LogEntry>>> = remember(uiState.items) {
+                        val sorted = uiState.items.sortedByDescending { it.ts }
+                        sorted.groupBy { dateFormat.format(Date(it.ts)) }
+                            .toList()
+                    }
 
-
-                    // Danh sách log
-                    if (logs.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                if (selectedDate != null)
-                                    "Không có hoạt động nào trong ngày đã chọn"
-                                else
-                                    "Không có lịch sử hoạt động"
-                            )
+                    if (grouped.isEmpty()) {
+                        Box(Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Text("Không có hoạt động nào")
                         }
                     } else {
-                        // Group logs by date
-                        val groupedLogs = logs.groupBy { log ->
-                            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(log.timestamp)
-                        }
-                        LazyColumn(
-                            modifier = Modifier
-                                .padding(16.dp)
-                        ) {
-                            groupedLogs.forEach { (date, logEntries) ->
-                                // Show header for each date group
-                                item {
-                                    LogListHeader(logEntries.first())
-                                }
-                                items(logEntries) { logEntry ->
-                                    LogEntryItem(logEntry)
+                        LazyColumn(Modifier.padding(16.dp)) {
+                            grouped.forEach { (dateStr, logs) ->
+                                item { LogListHeader(dateStr) }
+                                items(logs) { entry ->
+                                    LogEntryItem(entry, timeText = timeFormat.format(Date(entry.ts)))
                                 }
                             }
                         }
@@ -173,58 +106,42 @@ fun HistoryScreen(
 }
 
 @Composable
-fun LogListHeader(entry: LogEntry) {
+fun LogListHeader(dateStr: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(end = 8.dp, top = 12.dp),
-        horizontalArrangement =  Arrangement.End,
+        modifier = Modifier.fillMaxWidth().padding(end = 8.dp, top = 12.dp),
+        horizontalArrangement = Arrangement.End
     ) {
-        FormattedDate(timestamp = entry.timestamp)
+        Text(
+            text = dateStr,
+            style = MaterialTheme.typography.labelLarge.copy(
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        )
     }
 }
 
+
 @Composable
-fun LogEntryItem(entry: LogEntry) {
-    val actionColor = when {
-        entry.action.contains("emergency") -> Color.Red
-        entry.action.contains("mode_change") -> Blue
-        else -> Color.Black
-    }
+fun LogEntryItem(entry: LogEntry, timeText: String) {
+    val (actionName, actionIcon, actionColor) = actionMeta(entry)
+    val description = buildDescription(entry) // hàm thuần, giữ nguyên
 
-    val actionIcon = when {
-        entry.action.contains("emergency") -> Icons.Default.Warning
-        entry.action.contains("mode_change") -> Icons.Default.Sync
-        else -> Icons.Default.Info
-    }
-
-    val actionName = when {
-        entry.action.contains("emergency") -> "Khẩn cấp"
-        entry.action.contains("mode_change") -> "Chuyển đổi chế độ"
-        else -> "Thông tin"
-    }
-
-    Row (
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp, horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column (
+        Column(
             verticalArrangement = Arrangement.spacedBy(4.dp, alignment = Alignment.CenterVertically),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ){
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(Modifier.size(12.dp).background(actionColor, CircleShape))
             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(actionColor, CircleShape)
-            )
-            Box (
-                modifier = Modifier
+                Modifier
                     .size(width = 2.dp, height = 35.dp)
                     .background(MaterialTheme.colorScheme.onSurfaceVariant, RectangleShape)
             )
-
         }
 
         Card(
@@ -232,15 +149,13 @@ fun LogEntryItem(entry: LogEntry) {
                 .fillMaxWidth()
                 .padding(start = 8.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column (
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp, horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp, alignment = Alignment.CenterVertically),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 horizontalAlignment = Alignment.Start
             ) {
                 Row(
@@ -250,58 +165,33 @@ fun LogEntryItem(entry: LogEntry) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row (
+                    Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = actionIcon,
-                            contentDescription = null,
-                            tint = actionColor,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(actionIcon, null, tint = actionColor, modifier = Modifier.size(20.dp))
                         Text(
                             text = actionName,
                             style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
                             color = actionColor
                         )
                     }
-                    FormattedTime(timestamp = entry.timestamp)
-                }
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text (
-                        text = getActionDescription(entry.action, entry.from, entry.to),
-                        modifier = Modifier.weight(2f),
-                        style = MaterialTheme.typography.bodyMedium
-                            .copy(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 15.sp,
-                            )
-                    )
-                }
-
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Cột người thực hiện
                     Text(
-                        text = "Bởi: ${entry.by}",
-                        modifier = Modifier.weight(1.5f),
-                        style = MaterialTheme.typography.bodyMedium
+                        timeText,
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     )
+                }
 
-                    Text (
-                        text = "2 phút trước",
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = description,
                         modifier = Modifier.weight(2f),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 15.sp
+                        )
                     )
                 }
             }
@@ -309,12 +199,55 @@ fun LogEntryItem(entry: LogEntry) {
     }
 }
 
-// Hàm hiển thị mô tả hành động dễ đọc
-fun getActionDescription(action: String, from: String, to: String): String {
-    return when (action) {
-        "mode_change" -> "Chuyển chế độ từ $from sang $to"
-        "emergency_activated" -> "Kích hoạt khẩn cấp ${to.replace("emergency_", "")}"
-        "emergency_deactivated" -> "Kết thúc khẩn cấp"
-        else -> action
+/** Màu + icon + nhãn theo Mode + LogType (đã tách emergency_A/B) */
+@Composable
+private fun actionMeta(entry: LogEntry): Triple<String, ImageVector, Color> {
+    val mode = entry.mode
+    val (name, icon) = when (entry.type) {
+        LogType.MODE_START -> when (mode) {
+            Mode.night        -> "Bật chế độ đêm" to Icons.Default.Schedule
+            Mode.emergency_A  -> "Bật khẩn cấp (A)" to Icons.Default.Warning
+            Mode.emergency_B  -> "Bật khẩn cấp (B)" to Icons.Default.Warning
+            Mode.peak         -> "Bật chế độ giờ cao điểm" to Icons.Default.TrendingUp
+            Mode.default      -> "Bật chế độ mặc định" to Icons.Default.CheckCircle
+            null              -> "Bắt đầu" to Icons.Default.CheckCircle
+        }
+        LogType.MODE_END -> when (mode) {
+            Mode.night        -> "Kết thúc chế độ đêm" to Icons.Default.StopCircle
+            Mode.emergency_A  -> "Kết thúc khẩn cấp (A)" to Icons.Default.StopCircle
+            Mode.emergency_B  -> "Kết thúc khẩn cấp (B)" to Icons.Default.StopCircle
+            Mode.peak         -> "Kết thúc giờ cao điểm" to Icons.Default.StopCircle
+            Mode.default      -> "Kết thúc chế độ mặc định" to Icons.Default.StopCircle
+            null              -> "Kết thúc" to Icons.Default.StopCircle
+        }
+        else -> "Sự kiện" to Icons.Default.CheckCircle
+    }
+
+    val color = when (mode) {
+        Mode.night        -> Color.DarkGray
+        Mode.emergency_A,
+        Mode.emergency_B  -> Red
+        Mode.peak         -> Orange
+        Mode.default, null -> MaterialTheme.colorScheme.primary
+    }
+    return Triple(name, icon, color)
+}
+
+/** Mô tả chi tiết (peak hiển thị A/B sec; emergency A/B hiển thị hướng) */
+private fun buildDescription(entry: LogEntry): String {
+    return when (entry.mode) {
+        Mode.emergency_A ->
+            if (entry.type == LogType.MODE_START) "Ưu tiên hướng A" else "Kết thúc khẩn cấp (A)"
+        Mode.emergency_B ->
+            if (entry.type == LogType.MODE_START) "Ưu tiên hướng B" else "Kết thúc khẩn cấp (B)"
+        Mode.peak ->
+            if (entry.type == LogType.MODE_START)
+                "A: ${entry.greenA_s ?: "?"}s • B: ${entry.greenB_s ?: "?"}s"
+            else "Kết thúc chế độ giờ cao điểm"
+        Mode.night ->
+            if (entry.type == LogType.MODE_START) "Nhấp nháy vàng" else "Kết thúc chế độ đêm"
+        Mode.default ->
+            if (entry.type == LogType.MODE_START) "Về lịch mặc định" else "Tạm dừng chế độ mặc định"
+        null -> "Sự kiện không xác định"
     }
 }

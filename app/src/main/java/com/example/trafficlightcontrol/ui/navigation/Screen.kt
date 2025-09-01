@@ -5,7 +5,6 @@ package com.example.trafficlightcontrol.ui.navigation
  */
 sealed class Screen(val route: String) {
     object Dashboard : Screen("dashboard")
-    object Schedule : Screen("schedule")
     object Control : Screen("control/{mode}")
     object DirectControl : Screen("control/{mode}")  // Used with arguments
     object History : Screen("history")

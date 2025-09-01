@@ -2,74 +2,67 @@ package com.example.trafficlightcontrol.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.trafficlightcontrol.data.model.*
+import com.example.trafficlightcontrol.data.model.LogEntry
 import com.example.trafficlightcontrol.data.repository.TrafficLightRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import java.util.*
+import java.time.*
+import java.time.ZoneId
+
+data class HistoryUiState(
+    val isLoading: Boolean = true,
+    val dateFilter: LocalDate? = null,
+    val items: List<LogEntry> = emptyList()
+)
 
 class HistoryViewModel(
-    private val repository: TrafficLightRepository
+    private val repo: TrafficLightRepository,
+    private val intersectionId: String
 ) : ViewModel() {
 
-    private val _logs = MutableStateFlow<List<LogEntry>>(emptyList())
-    val logs: StateFlow<List<LogEntry>> = _logs
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading
-
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error
-
-    // Bộ lọc
-    private val _selectedDate = MutableStateFlow<Date?>(null)
-    val selectedDate: StateFlow<Date?> = _selectedDate
+    private val _state = MutableStateFlow(HistoryUiState())
+    val state: StateFlow<HistoryUiState> = _state.asStateFlow()
 
     init {
-        loadLogs()
+        observeLogs()
     }
 
-    private fun loadLogs() {
+    private fun observeLogs() {
         viewModelScope.launch {
-            try {
-                repository.getLogs(100).collect { logEntries ->
-                    _logs.value = filterLogsByDate(logEntries)
-                    _isLoading.value = false
+            repo.logsFlow(intersectionId, limit = 200)
+                .onStart { _state.update { it.copy(isLoading = true) } }
+                .collect { logs ->
+                    _state.update { cur ->
+                        cur.copy(
+                            isLoading = false,
+                            items = applyDateFilter(logs, cur.dateFilter)
+                        )
+                    }
                 }
-            } catch (e: Exception) {
-                _error.value = "Lỗi khi tải lịch sử: ${e.message}"
-                _isLoading.value = false
-            }
         }
     }
 
-    fun setDateFilter(date: Date?) {
-        _selectedDate.value = date
-        // Áp dụng bộ lọc cho dữ liệu hiện tại
-        _logs.value = filterLogsByDate(_logs.value)
-    }
-
-    private fun filterLogsByDate(logs: List<LogEntry>): List<LogEntry> {
-        val filterDate = _selectedDate.value ?: return logs
-
-        return logs.filter { log ->
-            val logDate = Date(log.timestamp)
-            isSameDay(logDate, filterDate)
+    fun setDateFilter(date: LocalDate?) {
+        _state.update { cur ->
+            cur.copy(
+                dateFilter = date,
+                items = applyDateFilter(cur.items, date, recheck = true)
+            )
         }
     }
 
-    private fun isSameDay(date1: Date, date2: Date): Boolean {
-        val cal1 = Calendar.getInstance()
-        cal1.time = date1
-        val cal2 = Calendar.getInstance()
-        cal2.time = date2
+    fun clearFilter() = setDateFilter(null)
 
-        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
-                cal1.get(Calendar.MONTH) == cal2.get(Calendar.MONTH) &&
-                cal1.get(Calendar.DAY_OF_MONTH) == cal2.get(Calendar.DAY_OF_MONTH)
-    }
-
-    fun clearError() {
-        _error.value = null
+    private fun applyDateFilter(
+        logs: List<LogEntry>,
+        date: LocalDate?,
+        recheck: Boolean = false
+    ): List<LogEntry> {
+        if (date == null) return logs
+        val zone = ZoneId.systemDefault()
+        val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() - 1
+        return logs.filter { it.ts in start..end }
+            .sortedByDescending { it.ts }
     }
 }

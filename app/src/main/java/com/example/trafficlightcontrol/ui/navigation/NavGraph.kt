@@ -19,9 +19,7 @@ import com.example.trafficlightcontrol.ui.viewmodel.*
 fun TrafficLightNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    username: String,
     dashboardViewModel: DashboardViewModel,
-    scheduleViewModel: ScheduleViewModel,
     controlViewModel: ControlViewModel,
     historyViewModel: HistoryViewModel
 ) {
@@ -58,17 +56,9 @@ fun TrafficLightNavGraph(
         composable(Screen.Dashboard.route) {
             DashboardScreen(
                 viewModel = dashboardViewModel,
-                navigateToSchedule = { navController.navigate(Screen.Schedule.route) },
                 navigateToControl = { mode ->
                     navController.navigate(Screen.DirectControl.createRoute(mode))
                 }
-            )
-        }
-
-        // Màn hình Schedule
-        composable(Screen.Schedule.route) {
-            ScheduleScreen(
-                viewModel = scheduleViewModel
             )
         }
 
@@ -85,8 +75,8 @@ fun TrafficLightNavGraph(
             val mode = backStackEntry.arguments?.getString("mode") ?: "peak"
             ControlScreen(
                 viewModel = controlViewModel,
-                username = username,
-                initialTab = mode
+                initialTab = mode,
+                navController = navController
             )
         }
 
@@ -99,10 +89,7 @@ fun TrafficLightNavGraph(
 
         // Màn hình Settings
         composable(Screen.Settings.route) {
-            SettingsScreen(
-                viewModel = dashboardViewModel,
-                username = username
-            )
+            SettingsScreen()
         }
     }
 }

@@ -7,14 +7,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.example.trafficlightcontrol.data.repository.TrafficLightRepository
 import com.example.trafficlightcontrol.ui.component.TrafficLightBottomNavigation
-import com.example.trafficlightcontrol.ui.navigation.NavigationActions
 import com.example.trafficlightcontrol.ui.navigation.TrafficLightNavGraph
 import com.example.trafficlightcontrol.ui.theme.TrafficLightControlTheme
 import com.example.trafficlightcontrol.ui.viewmodel.*
+import com.google.firebase.database.FirebaseDatabase
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,23 +31,53 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
-    // Repository
-    val repository = remember { TrafficLightRepository() }
+    // Firebase đã init trong Application
+    val db = remember { FirebaseDatabase.getInstance() }
+    val appScope = rememberCoroutineScope()
+    val repo = remember(db, appScope) {
+        TrafficLightRepository(db = db, appScope = appScope)
+    }
 
-    // ViewModels
-    val dashboardViewModel = viewModel { DashboardViewModel(repository) }
-    val scheduleViewModel = viewModel { ScheduleViewModel(repository) }
-    val controlViewModel = viewModel { ControlViewModel(repository) }
-    val historyViewModel = viewModel { HistoryViewModel(repository) }
+    // Ngã tư đang điều khiển
+    val intersectionId = remember { "cs-qt-001" }
 
-    // Username (có thể thay thế bằng hệ thống đăng nhập thực tế)
-    val username = "bich-nhan"
+    // DashboardViewModel
+    val dashboardViewModel: DashboardViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return DashboardViewModel(
+                    db = db,
+                    repo = repo,
+                    intersectionId = intersectionId
+                ) as T
+            }
+        }
+    )
+
+    // ControlViewModel
+    val controlViewModel: ControlViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return ControlViewModel(repo = repo, intersectionId = intersectionId
+                ) as T
+            }
+        }
+    )
+
+    // HistoryViewModel
+    val historyViewModel: HistoryViewModel = viewModel(
+        factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                return HistoryViewModel(repo = repo, intersectionId = intersectionId) as T
+            }
+        }
+    )
 
     // Navigation
     val navController = rememberNavController()
-    val navigationActions = remember(navController) {
-        NavigationActions(navController)
-    }
 
     Scaffold(
         bottomBar = {
@@ -55,9 +87,7 @@ fun MainScreen() {
         TrafficLightNavGraph(
             navController = navController,
             modifier = Modifier.padding(innerPadding),
-            username = username,
             dashboardViewModel = dashboardViewModel,
-            scheduleViewModel = scheduleViewModel,
             controlViewModel = controlViewModel,
             historyViewModel = historyViewModel
         )
