@@ -89,7 +89,7 @@ fun TrafficLightNavGraph(
 
         // Màn hình Settings
         composable(Screen.Settings.route) {
-            SettingsScreen()
+            SettingsScreen( viewModel = dashboardViewModel )
         }
     }
 }

@@ -115,6 +115,7 @@ fun DashboardScreen(
                 }
 
                 item{
+                    Spacer(Modifier.height(8.dp))
                     // Header + chip mode
                     Row(
                         Modifier.fillMaxWidth(),
@@ -122,12 +123,13 @@ fun DashboardScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Cấu hình pha hiện tại",
+                            "Thông tin pha hiện tại",
                             style = MaterialTheme.typography.titleMedium,
                         )
                     }
                     Spacer(Modifier.height(12.dp))
                     PhaseConfigCard(
+                        mode = p?.mode ?: Mode.default,
                         durations = ui.durations ?: Durations(),
                     )
                 }

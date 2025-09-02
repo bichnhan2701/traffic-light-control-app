@@ -3,6 +3,7 @@ package com.example.trafficlightcontrol.ui.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -14,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -23,7 +26,7 @@ import com.example.trafficlightcontrol.ui.component.ConfirmPopup
 import com.example.trafficlightcontrol.ui.component.FlashingYellowLight
 import com.example.trafficlightcontrol.ui.component.LabelActive
 import com.example.trafficlightcontrol.ui.component.LabelInactive
-import com.example.trafficlightcontrol.ui.component.NumberSlider
+import com.example.trafficlightcontrol.ui.component.PhaseCol
 import com.example.trafficlightcontrol.ui.component.TrafficLight
 import com.example.trafficlightcontrol.ui.theme.*
 import com.example.trafficlightcontrol.ui.viewmodel.ControlViewModel
@@ -187,9 +190,18 @@ fun PeakModeTab(
     val isPeakActive = currentMode == Mode.peak
     var showConfigDialog by remember { mutableStateOf(false) }
 
-    var tempGreenA by remember { mutableFloatStateOf(currentGreenTimeA?.toFloat() ?: 20f) }
-    var tempGreenB by remember { mutableFloatStateOf(currentGreenTimeB?.toFloat() ?: 15f) }
+    // Trạng thái tạm cho hộp thoại cấu hình (dùng String để dễ kiểm soát nhập liệu)
+    var tempGreenAText by remember { mutableStateOf((currentGreenTimeA ?: 20).toString()) }
+    var tempGreenBText by remember { mutableStateOf((currentGreenTimeB ?: 15).toString()) }
 
+    // Parse & validate
+    fun String.toIntOrNullSafe(): Int? = this.toIntOrNull()
+    val aVal = tempGreenAText.toIntOrNullSafe()
+    val bVal = tempGreenBText.toIntOrNullSafe()
+    val aValid = aVal != null && aVal in 1..179
+    val bValid = bVal != null && bVal in 1..179
+
+    // Thông tin đỏ hiện tại (ngoài dialog)
     val redTimeA = (currentGreenTimeB ?: 15) + yellowTimeB
     val redTimeB = (currentGreenTimeA ?: 20) + yellowTimeA
 
@@ -206,8 +218,8 @@ fun PeakModeTab(
             Text("Chế độ giờ cao điểm", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(16.dp))
             if (isPeakActive) LabelActive() else LabelInactive()
-            Spacer(Modifier.height(8.dp))
-            Text("Ưu tiên kéo dài pha xanh cho hướng có lưu lượng lớn...", style = MaterialTheme.typography.bodyLarge)
+//            Spacer(Modifier.height(8.dp))
+//            Text("Ưu tiên kéo dài pha xanh cho hướng có lưu lượng lớn...", style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(20.dp))
         }
 
@@ -215,30 +227,45 @@ fun PeakModeTab(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Orange.copy(alpha = 0.1f)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-//                        Text("Trạng thái: ĐANG HOẠT ĐỘNG", style = MaterialTheme.typography.titleMedium, color = Orange)
-//                        Spacer(Modifier.height(8.dp))
-                        Text("Thông tin pha đèn hiện tại:", style = MaterialTheme.typography.bodyMedium)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Hướng A", fontWeight = FontWeight.Bold)
-                            Column {
-                                Text("Xanh: ${currentGreenTimeA ?: "--"}s", color = Green)
-                                Text("Vàng: $yellowTimeA s", color = Red)
-                                Text("Đỏ: $redTimeA s", color = Yellow)
-                            }
+                        Text("Thông tin pha đèn hiện tại", style = MaterialTheme.typography.titleMedium)
+                        Row(Modifier.fillMaxWidth()) {
+                            PhaseCol(
+                                title = "Hướng A",
+                                greenS = currentGreenTimeA ?: 0,
+                                yellowS = yellowTimeA,
+                                redS = redTimeA,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(Modifier.width(48.dp))
+                            PhaseCol(
+                                title = "Hướng B",
+                                greenS = currentGreenTimeB ?: 0,
+                                yellowS = yellowTimeB,
+                                redS = redTimeB,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Hướng B", fontWeight = FontWeight.Bold)
-                            Column {
-                                Text("Xanh: ${currentGreenTimeB ?: "--"}s", color = Green)
-                                Text("Vàng: $yellowTimeB s", color = Yellow)
-                                Text("Đỏ: $redTimeB s", color = Red)
-                            }
-                        }
+//                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+//                            Text("Hướng A", fontWeight = FontWeight.Bold)
+//                            Column {
+//                                Text("Xanh: ${currentGreenTimeA ?: "--"}s", color = Green)
+//                                Text("Vàng: $yellowTimeA s", color = Red)
+//                                Text("Đỏ: $redTimeA s", color = Yellow)
+//                            }
+//                        }
+//                        Spacer(Modifier.height(4.dp))
+//                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+//                            Text("Hướng B", fontWeight = FontWeight.Bold)
+//                            Column {
+//                                Text("Xanh: ${currentGreenTimeB ?: "--"}s", color = Green)
+//                                Text("Vàng: $yellowTimeB s", color = Yellow)
+//                                Text("Đỏ: $redTimeB s", color = Red)
+//                            }
+//                        }
                         Spacer(Modifier.height(24.dp))
                         Button(
                             onClick = onDeactivate,
@@ -246,7 +273,7 @@ fun PeakModeTab(
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Gray),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Default.StopCircle, contentDescription = null, tint = Color.White)
                             Spacer(Modifier.width(8.dp))
                             Text("Kết thúc chế độ cao điểm", color = Color.White)
                         }
@@ -257,8 +284,9 @@ fun PeakModeTab(
             item {
                 Button(
                     onClick = {
-                        tempGreenA = currentGreenTimeA?.toFloat() ?: 20f
-                        tempGreenB = currentGreenTimeB?.toFloat() ?: 15f
+                        // Reset giá trị mỗi lần mở dialog
+                        tempGreenAText = (currentGreenTimeA ?: 20).toString()
+                        tempGreenBText = (currentGreenTimeB ?: 15).toString()
                         showConfigDialog = true
                     },
                     enabled = enabled,
@@ -267,7 +295,7 @@ fun PeakModeTab(
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Cấu hình & kích hoạt cao điểm", color = Color.White)
+                    Text("Cấu hình và kích hoạt", color = Color.White)
                 }
             }
         }
@@ -276,60 +304,104 @@ fun PeakModeTab(
     if (showConfigDialog) {
         AlertDialog(
             onDismissRequest = { showConfigDialog = false },
-            title = { Text("Cấu hình thời gian cao điểm") },
+            title = { Text("Cấu hình") },
             text = {
                 Column {
-                    Text("Điều chỉnh thời gian xanh cho từng hướng", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "Điều chỉnh thời gian đèn xanh cho từng hướng",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
                     Spacer(Modifier.height(12.dp))
+
+                    // Hướng A
                     Text("Hướng A", fontWeight = FontWeight.Bold)
-                    NumberSlider(
-                        value = tempGreenA,
-                        onValueChange = { tempGreenA = it },
-                        valueRange = 10f..150f,
-                        step = 1
+                    OutlinedTextField(
+                        value = tempGreenAText,
+                        onValueChange = { new ->
+                            // Chỉ nhận tối đa 3 chữ số 0-9
+                            if (new.matches(Regex("""\d{0,3}"""))) {
+                                tempGreenAText = new
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = tempGreenAText.isNotEmpty() && !aValid,
+                        supportingText = {
+                            when {
+                                tempGreenAText.isEmpty() -> Text("Nhập số giây (1..179)")
+                                !aValid -> Text("Giá trị phải > 0 và < 180")
+                                else -> Text("Giá trị hợp lệ")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Xanh (giây)") }
                     )
-                    Text("${tempGreenA.toInt()} giây", style = MaterialTheme.typography.bodySmall)
+
                     Spacer(Modifier.height(8.dp))
+
+                    // Hướng B
                     Text("Hướng B", fontWeight = FontWeight.Bold)
-                    NumberSlider(
-                        value = tempGreenB,
-                        onValueChange = { tempGreenB = it },
-                        valueRange = 10f..150f,
-                        step = 1
+                    OutlinedTextField(
+                        value = tempGreenBText,
+                        onValueChange = { new ->
+                            if (new.matches(Regex("""\d{0,3}"""))) {
+                                tempGreenBText = new
+                            }
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        isError = tempGreenBText.isNotEmpty() && !bValid,
+                        supportingText = {
+                            when {
+                                tempGreenBText.isEmpty() -> Text("Nhập số giây (1..179)")
+                                !bValid -> Text("Giá trị phải > 0 và < 180")
+                                else -> Text("Giá trị hợp lệ")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Xanh (giây)") }
                     )
-                    Text("${tempGreenB.toInt()} giây", style = MaterialTheme.typography.bodySmall)
 
                     Spacer(Modifier.height(16.dp))
-                    val futureRedA = tempGreenB.toInt() + yellowTimeB
-                    val futureRedB = tempGreenA.toInt() + yellowTimeA
+
+                    // Tính đỏ tương lai (chỉ hiển thị khi hợp lệ)
+                    val futureRedAText = if (bValid) "${bVal + yellowTimeB} s" else "—"
+                    val futureRedBText = if (aValid) "${aVal + yellowTimeA} s" else "—"
+
                     Divider(Modifier.padding(vertical = 8.dp))
                     Text("Các pha đèn sẽ áp dụng:", style = MaterialTheme.typography.bodyMedium)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Hướng A")
-                        Text("Xanh: ${tempGreenA.toInt()}s, Vàng: $yellowTimeA s, Đỏ: $futureRedA s")
+                        Text("Xanh: ${tempGreenAText.ifEmpty { "—" }} s, Vàng: $yellowTimeA s, Đỏ: $futureRedAText")
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Hướng B")
-                        Text("Xanh: ${tempGreenB.toInt()}s, Vàng: $yellowTimeB s, Đỏ: $futureRedB s")
+                        Text("Xanh: ${tempGreenBText.ifEmpty { "—" }} s, Vàng: $yellowTimeB s, Đỏ: $futureRedBText")
                     }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onApplyPeak(tempGreenA.toInt(), tempGreenB.toInt())
-                        showConfigDialog = false
+                        // Chỉ chạy khi hợp lệ
+                        if (aValid && bValid) {
+                            onApplyPeak(aVal, bVal)
+                            showConfigDialog = false
+                        }
                     },
-                    enabled = enabled,
+                    enabled = enabled && aValid && bValid,
                     colors = ButtonDefaults.buttonColors(containerColor = Orange)
                 ) { Text("Áp dụng", color = Color.White) }
             },
             dismissButton = {
                 OutlinedButton(onClick = { showConfigDialog = false }) { Text("Hủy") }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }
+
 
 @Composable
 fun NightModeTab(
@@ -351,14 +423,14 @@ fun NightModeTab(
                 modifier = Modifier.size(80.dp).padding(16.dp),
                 tint = Color.DarkGray
             )
-            Text("Chế độ đèn nháy vàng ban đêm", style = MaterialTheme.typography.titleLarge)
+            Text("Chế độ ban đêm", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(16.dp))
             if (isNightActive) LabelActive() else LabelInactive()
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Tất cả đèn vàng nhấp nháy",
-                style = MaterialTheme.typography.bodyLarge
-            )
+//            Spacer(Modifier.height(8.dp))
+//            Text(
+//                "Tất cả đèn vàng nhấp nháy",
+//                style = MaterialTheme.typography.bodyLarge
+//            )
             Spacer(Modifier.height(20.dp))
         }
 
@@ -378,10 +450,10 @@ fun NightModeTab(
                         }
                         Spacer(Modifier.height(32.dp))
                         ActionButton(
-                            text = "Kết thúc chế độ đêm",
+                            text = "Kết thúc chế độ ban đêm",
                             onClick = onDeactivate,
                             backgroundColor = Color.Gray,
-                            icon = { Icon(Icons.Default.Close, contentDescription = null, tint = Color.White) }
+                            icon = { Icon(Icons.Default.StopCircle, contentDescription = null, tint = Color.White) }
                         )
                     }
                 }
@@ -396,7 +468,7 @@ fun NightModeTab(
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null, tint = Color.White)
                     Spacer(Modifier.width(8.dp))
-                    Text("Kích hoạt chế độ đêm", color = Color.White)
+                    Text("Kích hoạt chế độ ban đêm", color = Color.White)
                 }
             }
         }
@@ -434,11 +506,11 @@ fun EmergencyModeTab(
                 modifier = Modifier.size(80.dp).padding(16.dp),
                 tint = Red
             )
-            Text("Chế độ khẩn cấp thủ công", style = MaterialTheme.typography.titleLarge)
+            Text("Chế độ khẩn cấp", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(16.dp))
             if (isEmergencyActive) LabelActive() else LabelInactive()
-            Spacer(Modifier.height(8.dp))
-            Text("Ưu tiên hoàn toàn cho một hướng", style = MaterialTheme.typography.bodyLarge)
+//            Spacer(Modifier.height(8.dp))
+//            Text("Ưu tiên hoàn toàn cho một hướng", style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(20.dp))
         }
 
@@ -453,8 +525,8 @@ fun EmergencyModeTab(
 //                        Text("CHẾ ĐỘ KHẨN CẤP ĐANG HOẠT ĐỘNG", style = MaterialTheme.typography.titleMedium, color = Red)
 //                        Spacer(Modifier.height(16.dp))
                         Text("Ưu tiên cho hướng ${priorityDirection ?: "-"}", style = MaterialTheme.typography.titleLarge)
-                        Spacer(Modifier.height(8.dp))
-                        Text("Hướng ${if (priorityDirection == "A") "B" else "A"} đang dừng hoàn toàn", style = MaterialTheme.typography.bodyLarge)
+//                        Spacer(Modifier.height(8.dp))
+//                        Text("Hướng ${if (priorityDirection == "A") "B" else "A"} đang dừng hoàn toàn", style = MaterialTheme.typography.bodyLarge)
                         Spacer(Modifier.height(24.dp))
                         Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -473,9 +545,9 @@ fun EmergencyModeTab(
                             colors = ButtonDefaults.buttonColors(containerColor = Red),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = null, tint = Color.White)
+                            Icon(Icons.Default.StopCircle, contentDescription = null, tint = Color.White)
                             Spacer(Modifier.width(8.dp))
-                            Text("Kết thúc chế độ", color = Color.White)
+                            Text("Kết thúc chế độ khẩn cấp", color = Color.White)
                         }
                     }
                 }
@@ -513,10 +585,11 @@ fun EmergencyModeTab(
                         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                     ) {
                         Text(
-                            "CHÚ Ý: Khi bật chế độ khẩn cấp, hướng còn lại sẽ hiển thị đèn đỏ liên tục!",
+                            "CHÚ Ý: Chế độ này dành cho trường hợp đặc biệt cần ưu tiên khẩn cấp!",
                             style = MaterialTheme.typography.bodyMedium,
                             color = Red,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -527,7 +600,7 @@ fun EmergencyModeTab(
     if (showConfirmPopupA) {
         ConfirmPopup(
             title = "Xác nhận chuyển sang chế độ khẩn cấp",
-            message = "Bạn có chắc muốn ưu tiên hướng A? Hướng B sẽ luôn đỏ.",
+            message = "Bạn có chắc muốn ưu tiên hướng A?",
             onConfirm = { onActivateA(); showConfirmPopupA = false },
             onDismiss = { showConfirmPopupA = false }
         )
@@ -535,7 +608,7 @@ fun EmergencyModeTab(
     if (showConfirmPopupB) {
         ConfirmPopup(
             title = "Xác nhận chuyển sang chế độ khẩn cấp",
-            message = "Bạn có chắc muốn ưu tiên hướng B? Hướng A sẽ luôn đỏ.",
+            message = "Bạn có chắc muốn ưu tiên hướng B?",
             onConfirm = { onActivateB(); showConfirmPopupB = false },
             onDismiss = { showConfirmPopupB = false }
         )

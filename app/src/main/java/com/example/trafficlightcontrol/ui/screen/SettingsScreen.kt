@@ -6,14 +6,23 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.trafficlightcontrol.data.model.Durations
+import com.example.trafficlightcontrol.data.model.Mode
+import com.example.trafficlightcontrol.ui.component.PhaseConfigCard
+import com.example.trafficlightcontrol.ui.viewmodel.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(
+    viewModel: DashboardViewModel,
+) {
+    val ui by viewModel.uiState.collectAsState()
+    val p = ui.phasePanel
     val scaffoldState = remember { SnackbarHostState() }
 
     // Hiển thị Snackbar khi có lỗi
@@ -40,20 +49,22 @@ fun SettingsScreen() {
                 .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-//            Spacer(modifier = Modifier.height(16.dp))
-//            Card(
-//                modifier = Modifier
-//                    .fillMaxWidth(),
-//                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-//                colors = CardDefaults.cardColors(
-//                    containerColor = MaterialTheme.colorScheme.background
-//                )
-//            ) {
-//                Text(
-//                    "Hướng dẫn sử dụng",
-//                    style = MaterialTheme.typography.titleMedium
-//                )
-//            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "Thông tin pha mặc định",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            PhaseConfigCard(
+                mode = p?.mode ?: Mode.default,
+                durations = ui.durations ?: Durations(),
+            )
             Spacer(modifier = Modifier.height(16.dp))
             // Phần hướng dẫn sử dụng
             Card(

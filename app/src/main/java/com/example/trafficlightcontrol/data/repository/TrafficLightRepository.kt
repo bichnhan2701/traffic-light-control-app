@@ -397,7 +397,7 @@ class TrafficLightRepository(
                 val logsRef = Paths.logs(db, intersectionId)
                 logsRef.push().updateChildren(
                     mapOf(
-                        "type" to "mode_start_meta",
+                        "type" to "mode_start",
                         "mode" to Mode.peak.name,
                         "startedAt" to ServerValue.TIMESTAMP,
                         "source" to "android",

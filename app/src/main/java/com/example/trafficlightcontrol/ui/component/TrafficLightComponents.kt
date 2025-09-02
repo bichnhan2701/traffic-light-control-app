@@ -21,6 +21,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import com.example.trafficlightcontrol.data.model.*
 
@@ -378,6 +379,7 @@ fun ConnectionStatusBadge(
 
 @Composable
 fun PhaseConfigCard(
+    mode: Mode,
     durations: Durations,
     modifier: Modifier = Modifier
 ) {
@@ -401,28 +403,72 @@ fun PhaseConfigCard(
         Column(Modifier.padding(16.dp)) {
             // Bảng A/B
             Row(Modifier.fillMaxWidth()) {
-                PhaseCol(
-                    title = "Hướng A",
-                    greenS = aGreenS,
-                    yellowS = yellowS,
-                    redS = aRedS,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(48.dp))
-                PhaseCol(
-                    title = "Hướng B",
-                    greenS = bGreenS,
-                    yellowS = yellowS,
-                    redS = bRedS,
-                    modifier = Modifier.weight(1f)
-                )
+                if (mode == Mode.night) {
+                    PhaseCol1(
+                        title = "Hướng A",
+                        content = "Đi chậm và chú ý quan sát",
+                        modifier = Modifier.weight(1f),
+                        color = Yellow
+                    )
+                    Spacer(Modifier.width(48.dp))
+                    PhaseCol1(
+                        title = "Hướng B",
+                        content = "Đi chậm và chú ý quan sát",
+                        modifier = Modifier.weight(1f),
+                        color = Yellow
+                    )
+                } else if (mode == Mode.emergency_A) {
+                    PhaseCol1(
+                        title = "Hướng A",
+                        content = "Được ưu tiên",
+                        modifier = Modifier.weight(1f),
+                        color = Green
+                    )
+                    Spacer(Modifier.width(48.dp))
+                    PhaseCol1(
+                        title = "Hướng B",
+                        content = "Dừng",
+                        modifier = Modifier.weight(1f),
+                        color = Red
+                    )
+                } else if (mode == Mode.emergency_B) {
+                    PhaseCol1(
+                        title = "Hướng A",
+                        content = "Dừng",
+                        modifier = Modifier.weight(1f),
+                        color = Red
+                    )
+                    Spacer(Modifier.width(48.dp))
+                    PhaseCol1(
+                        title = "Hướng B",
+                        content = "Được ưu tiên",
+                        modifier = Modifier.weight(1f),
+                        color = Green
+                    )
+                } else {
+                    PhaseCol(
+                        title = "Hướng A",
+                        greenS = aGreenS,
+                        yellowS = yellowS,
+                        redS = aRedS,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(48.dp))
+                    PhaseCol(
+                        title = "Hướng B",
+                        greenS = bGreenS,
+                        yellowS = yellowS,
+                        redS = bRedS,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PhaseCol(
+fun PhaseCol(
     title: String,
     greenS: Int,
     yellowS: Int,
@@ -430,22 +476,50 @@ private fun PhaseCol(
     modifier: Modifier = Modifier
 ) {
     Column(modifier) {
-        Text(title, fontWeight = FontWeight.SemiBold)
+        Text(
+            title,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Divider()
         Spacer(Modifier.height(8.dp))
-        PhaseRow(label = "Xanh", value = "${greenS}s")
-        PhaseRow(label = "Vàng", value = "${yellowS}s")
-        PhaseRow(label = "Đỏ", value = "${redS}s")
+        PhaseRow(label = "Xanh", value = "${greenS}s", color = Green)
+        PhaseRow(label = "Vàng", value = "${yellowS}s", color = Yellow)
+        PhaseRow(label = "Đỏ", value = "${redS}s", color = Red)
     }
 }
 
 @Composable
-private fun PhaseRow(label: String, value: String) {
+fun PhaseCol1(
+    title: String,
+    content: String,
+    modifier: Modifier = Modifier,
+    color: Color
+) {
+    Column(modifier) {
+        Text(
+            title,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center,
+        )
+        Divider()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            content,
+            textAlign = TextAlign.Center,
+            color = color
+        )
+    }
+}
+
+@Composable
+private fun PhaseRow(label: String, value: String, color: Color) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label)
-        Text(value, fontWeight = FontWeight.Medium)
+        Text(label, fontWeight = FontWeight.Medium)
+        Text(value, fontWeight = FontWeight.Medium, color = color)
     }
 }
 
