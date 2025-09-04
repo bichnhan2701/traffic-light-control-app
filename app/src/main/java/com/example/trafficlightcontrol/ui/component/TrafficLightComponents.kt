@@ -102,7 +102,6 @@ fun TrafficLightDisplay(
 
     when (mode) {
         Mode.night -> {
-            // Nháy do ViewModel đã xử lý sẵn trong lights → chỉ dán nhãn
             aPhaseLabel = "Nháy vàng"
             bPhaseLabel = "Nháy vàng"
         }
@@ -113,6 +112,10 @@ fun TrafficLightDisplay(
         Mode.emergency_B -> {
             aPhaseLabel = "Chờ"
             bPhaseLabel = "Ưu tiên"
+        }
+        Mode.emergency -> {
+            aPhaseLabel = "Khẩn cấp"
+            bPhaseLabel = "Khẩn cấp"
         }
         Mode.peak, Mode.default -> {
             val greenA_s = (durations.greenA_ms / 1000f)

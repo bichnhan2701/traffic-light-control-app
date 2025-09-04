@@ -208,6 +208,7 @@ private fun actionMeta(entry: LogEntry): Triple<String, ImageVector, Color> {
             Mode.night        -> "Bật chế độ đêm" to Icons.Default.Schedule
             Mode.emergency_A  -> "Bật khẩn cấp (A)" to Icons.Default.Warning
             Mode.emergency_B  -> "Bật khẩn cấp (B)" to Icons.Default.Warning
+            Mode.emergency    -> "Bật khẩn cấp" to Icons.Default.Warning
             Mode.peak         -> "Bật chế độ giờ cao điểm" to Icons.Default.TrendingUp
             Mode.default      -> "Bật chế độ mặc định" to Icons.Default.CheckCircle
             null              -> "Bắt đầu" to Icons.Default.CheckCircle
@@ -216,6 +217,7 @@ private fun actionMeta(entry: LogEntry): Triple<String, ImageVector, Color> {
             Mode.night        -> "Kết thúc chế độ đêm" to Icons.Default.StopCircle
             Mode.emergency_A  -> "Kết thúc khẩn cấp (A)" to Icons.Default.StopCircle
             Mode.emergency_B  -> "Kết thúc khẩn cấp (B)" to Icons.Default.StopCircle
+            Mode.emergency    -> "Kết thúc khẩn cấp" to Icons.Default.StopCircle
             Mode.peak         -> "Kết thúc giờ cao điểm" to Icons.Default.StopCircle
             Mode.default      -> "Kết thúc chế độ mặc định" to Icons.Default.StopCircle
             null              -> "Kết thúc" to Icons.Default.StopCircle
@@ -227,6 +229,7 @@ private fun actionMeta(entry: LogEntry): Triple<String, ImageVector, Color> {
         Mode.night        -> Color.DarkGray
         Mode.emergency_A,
         Mode.emergency_B  -> Red
+        Mode.emergency    -> Red
         Mode.peak         -> Orange
         Mode.default, null -> MaterialTheme.colorScheme.primary
     }
@@ -240,6 +243,8 @@ private fun buildDescription(entry: LogEntry): String {
             if (entry.type == LogType.MODE_START) "Ưu tiên hướng A" else "Kết thúc khẩn cấp (A)"
         Mode.emergency_B ->
             if (entry.type == LogType.MODE_START) "Ưu tiên hướng B" else "Kết thúc khẩn cấp (B)"
+        Mode.emergency ->
+            if (entry.type == LogType.MODE_START) "Kích hoạt chế độ khẩn cấp" else "Kết thúc chế độ khẩn cấp"
         Mode.peak ->
             if (entry.type == LogType.MODE_START)
                 "A: ${entry.greenA_s ?: "?"}s • B: ${entry.greenB_s ?: "?"}s"

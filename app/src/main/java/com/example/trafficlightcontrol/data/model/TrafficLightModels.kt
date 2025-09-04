@@ -5,11 +5,12 @@ package com.example.trafficlightcontrol.data.model
  * ========================= */
 
 enum class Mode {
-    default, night, emergency_A, emergency_B, peak;
+    default, night, emergency, emergency_A, emergency_B, peak;
 
     companion object {
         fun from(s: String?): Mode = when (s) {
             "night" -> night
+            "emergency" -> emergency
             "emergency_A" -> emergency_A
             "emergency_B" -> emergency_B
             "peak" -> peak

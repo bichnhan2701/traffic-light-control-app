@@ -69,10 +69,10 @@ class ControlViewModel(
         repo.setNight(intersectionId)
     }
     fun setEmergencyA() = send("Bật khẩn cấp A") {
-        repo.setEmergency(intersectionId, "A")
+        repo.setEmergencyA(intersectionId)
     }
     fun setEmergencyB() = send("Bật khẩn cấp B") {
-        repo.setEmergency(intersectionId, "B")
+        repo.setEmergencyB(intersectionId)
     }
     fun setPeak(greenA_s: Int, greenB_s: Int) = send("Đặt giờ cao điểm A=$greenA_s B=$greenB_s") {
         repo.setPeak(intersectionId, clampGreen(greenA_s), clampGreen(greenB_s))

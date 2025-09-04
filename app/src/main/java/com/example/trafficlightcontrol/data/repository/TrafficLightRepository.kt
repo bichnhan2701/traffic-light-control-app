@@ -368,10 +368,18 @@ class TrafficLightRepository(
 
     // ✅ Emergency tách A/B
     suspend fun setEmergencyA(intersectionId: String): Ack? =
-        setModeOnly(intersectionId, Mode.emergency_A)
+        setModeOnly(
+            intersectionId,
+            Mode.emergency,
+            extraPayload = mapOf("emergencyPriority" to "A")
+        )
 
     suspend fun setEmergencyB(intersectionId: String): Ack? =
-        setModeOnly(intersectionId, Mode.emergency_B)
+        setModeOnly(
+            intersectionId,
+            Mode.emergency,
+            extraPayload = mapOf("emergencyPriority" to "B")
+        )
 
     // (Tuỳ chọn) Giữ API cũ để tương thích
     @Deprecated("Use setEmergencyA/B instead")
