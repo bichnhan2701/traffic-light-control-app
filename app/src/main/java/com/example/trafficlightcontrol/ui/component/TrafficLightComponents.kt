@@ -303,8 +303,8 @@ fun ModeStatusBadge(mode: String) {
         "default" -> Triple(Blue, Color.White, "Mặc định")
         "peak" -> Triple(Orange, Color.Black, "Cao điểm")
         "night" -> Triple(Color.DarkGray, Color.White, "Đêm")
-        "emergency_A"-> Triple(Red, Color.White, "Khẩn cấp")
-        "emergency_B"-> Triple(Red, Color.White, "Khẩn cấp")
+        "emergency_a"-> Triple(Red, Color.White, "Khẩn cấp")
+        "emergency_b"-> Triple(Red, Color.White, "Khẩn cấp")
         "emergency"-> Triple(Red, Color.White, "Khẩn cấp")
         else -> Triple(Color.Gray, Color.White, "Unknown")
     }

@@ -366,8 +366,8 @@ fun PeakModeTab(
                     Spacer(Modifier.height(16.dp))
 
                     // Tính đỏ tương lai (chỉ hiển thị khi hợp lệ)
-                    val futureRedAText = if (bValid) "${bVal + yellowTimeB} s" else "—"
-                    val futureRedBText = if (aValid) "${aVal + yellowTimeA} s" else "—"
+                    val futureRedAText = if (bValid) "${bVal?.plus(yellowTimeB)} s" else "—"
+                    val futureRedBText = if (aValid) "${aVal?.plus(yellowTimeA)} s" else "—"
 
                     Divider(Modifier.padding(vertical = 8.dp))
                     Text("Các pha đèn sẽ áp dụng:", style = MaterialTheme.typography.bodyMedium)
@@ -386,7 +386,11 @@ fun PeakModeTab(
                     onClick = {
                         // Chỉ chạy khi hợp lệ
                         if (aValid && bValid) {
-                            onApplyPeak(aVal, bVal)
+                            if (aVal != null) {
+                                if (bVal != null) {
+                                    onApplyPeak(aVal, bVal)
+                                }
+                            }
                             showConfigDialog = false
                         }
                     },
